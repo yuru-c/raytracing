@@ -4,13 +4,25 @@
 
 #include <iostream>
 
-// 根據光線方向的Y軸高度 計算該點像素呈現的顏色
+// 幾何 一元二次方程式判別式
+bool hit_sphere(const point3& center, double radius, const ray& r) {
+    vec3 oc = center - r.origin();
+    auto a = dot(r.direction(), r.direction());
+    auto b = -2.0 * dot(r.direction(), oc);
+    auto c = dot(oc, oc) - radius*radius;
+    auto discriminant = b*b - 4*a*c;
+    return (discriminant >= 0); // >=0 撞到
+}
+
+// 著色 每個像素發射光線後該塗甚麼顏色
 color ray_color(const ray& r) {
-    // 1.光線方向向量縮放成長度為1.0的單位向量(只看方向不看長度)
+    // 在正前方 (0,0,-1)放一顆半徑0.5的紅色球體
+    if (hit_sphere(point3(0,0,-1), 0.5, r))
+        return color(1, 0, 0); // 撞到回傳紅色
+    
+    // 背景:沒撞到求救維持原本的天空
     vec3 unit_direction = unit_vector(r.direction());
-    // 2.把Y軸範圍從 [-1.0, 1.0] 映射到縣性差值範圍 [0.0, 1.0]
     auto a = 0.5 * (unit_direction.y() + 1.0);
-    // 3.線性插植(Lerp)公式: 當a=0為純白 當a=1為藍色
     return (1.0 - a) * color(1.0, 1.0, 1.0) + a * color(0.5, 0.7, 1.0);
 }
 
