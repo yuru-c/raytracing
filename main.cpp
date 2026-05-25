@@ -1,24 +1,20 @@
+#include "rtweekend.h"
+
 #include "color.h"
-#include "ray.h"
-#include "vec3.h"
+#include "hittable.h"
+#include "hittable_list.h"
+#include "sphere.h"
 
 #include <iostream>
 
-// 幾何 一元二次方程式判別式
-bool hit_sphere(const point3& center, double radius, const ray& r) {
-    vec3 oc = center - r.origin();
-    auto a = dot(r.direction(), r.direction());
-    auto b = -2.0 * dot(r.direction(), oc);
-    auto c = dot(oc, oc) - radius*radius;
-    auto discriminant = b*b - 4*a*c;
-    return (discriminant >= 0); // >=0 撞到
-}
-
-// 著色 每個像素發射光線後該塗甚麼顏色
-color ray_color(const ray& r) {
-    // 在正前方 (0,0,-1)放一顆半徑0.5的紅色球體
-    if (hit_sphere(point3(0,0,-1), 0.5, r))
-        return color(1, 0, 0); // 撞到回傳紅色
+// 著色 結合法向量
+color ray_color(const ray& r, const hittable& world) {
+    hit_record rec;
+    // 光線有效測試區間設定從0到無限
+    if (world.hit(r, interval(0, infinity), rec)) {
+        // 如果設中物件 將法向量的XYZ 映射到RGB顯色
+        return 0.5 * (rec.normal + color(1.0, 1.0, 1.0));
+    }
     
     // 背景:沒撞到求救維持原本的天空
     vec3 unit_direction = unit_vector(r.direction());
@@ -34,6 +30,15 @@ int main() {
     // 高度至少為1像素 防止除以0
     image_height = (image_height < 1) ? 1 : image_height;
 
+    // --- World 場景物件管理器 ---
+    hittable_list world;
+
+    // 放入球體 1：中央的彩色立體球
+    world.add(make_shared<sphere>(point3(0.0, 0.0, -1.0), 0.5));
+
+    // 放入球體 2：一顆在下方、半徑 100 的超級無敵巨球，用來模擬地平線巨型地面！
+    world.add(make_shared<sphere>(point3(0.0, -100.5, -1.0), 100.0));
+    
     // camera
     auto focal_length = 1.0; // 焦距:相機中心到畫布的距離
     auto viewport_height = 2.0; // 虛擬畫布的3D高度固定為2.0
@@ -72,7 +77,7 @@ int main() {
             ray r(camera_center, ray_direction);
             
             // 4.計算這條光線看到的顏色，並寫入標準輸出流
-            color pixel_color = ray_color(r);
+            color pixel_color = ray_color(r, world);
             write_color(std::cout, pixel_color);
         }
     }
