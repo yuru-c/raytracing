@@ -12,6 +12,7 @@ class camera {
 public:
     double aspect_ratio = 1.0; // 影像寬高比
     int image_width = 100; // 影像像素寬度
+    int samples_per_pixel = 10;   // 每個像素的隨機採樣數量 (預設 10)
 
     void render(const hittable& world) {
         initialize();
@@ -23,12 +24,14 @@ public:
         for (int j = 0; j < image_height; j++) {
             std::clog << "\rScanlines remaining: " << (image_height - j) << ' ' << std::flush;
             for (int i = 0; i < image_width; i++) {
-                auto pixel_center = pixel00_loc + (i * pixel_delta_u) + (j * pixel_delta_v);
-                auto ray_direction = pixel_center - center;
-                ray r(center, ray_direction);
-            
-                color pixel_color = ray_color(r, world);
-                write_color(outFile, pixel_color); // 直接寫入檔案流
+                // 收集並疊加多條隨機光線的顏色
+                color pixel_color(0, 0, 0);
+                for (int sample = 0; sample < samples_per_pixel; sample++) {
+                    ray r = get_ray(i, j);
+                    pixel_color += ray_color(r, world);
+                }
+                // 將加總的顏色乘以縮放因子 (除以 samples_per_pixel) 再寫入
+                write_color(outFile, pixel_samples_scale * pixel_color); 
             }
         }
         std::clog << "\rDone.                 \n";
@@ -37,6 +40,7 @@ public:
     
 private:
     int    image_height;   // 影像像素高度
+    double pixel_samples_scale;  // 色彩縮放因子 (1.0 / samples_per_pixel)
     point3 center;         // 相機中心點
     point3 pixel00_loc;    // (0,0) 像素的中心座標
     vec3   pixel_delta_u;  // 往右一個像素的偏移量
@@ -45,6 +49,9 @@ private:
     void initialize() {
         image_height = int(image_width / aspect_ratio);
         image_height = (image_height < 1) ? 1 : image_height;
+
+        // 計算乘數因子
+        pixel_samples_scale = 1.0 / samples_per_pixel;
 
         center = point3(0, 0, 0);
 
@@ -60,6 +67,22 @@ private:
     
         auto viewport_upper_left = center - vec3(0, 0, focal_length) - viewport_u/2 - viewport_v/2;
         pixel00_loc = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
+    }
+
+    // 建立一條射向像素 (i,j) 周邊隨機採樣點的光線
+    ray get_ray(int i, int j) const {
+        auto offset = sample_square();
+        auto pixel_sample = pixel00_loc + ((i + offset.x()) * pixel_delta_u) + ((j + offset.y()) * pixel_delta_v);
+
+        auto ray_origin = center;
+        auto ray_direction = pixel_sample - ray_origin;
+
+        return ray(ray_origin, ray_direction);
+    }
+
+    // 產生一個位於 [-0.5, -0.5] 到 [0.5, 0.5] 單位正方形內的隨機偏移向量
+    vec3 sample_square() const {
+        return vec3(random_double() - 0.5, random_double() - 0.5, 0);
     }
 
     color ray_color(const ray& r, const hittable& world) const {

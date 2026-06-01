@@ -5,6 +5,7 @@
 #include <iostream>
 #include <limits>
 #include <memory>
+#include <random> // C++標準隨機數庫
 
 // C++ 標準庫常用工具宣告
 using std::make_shared;
@@ -19,8 +20,19 @@ inline double degrees_to_radians(double degrees) {
     return degrees * pi / 180.0;
 }
 
+// 回傳[0,1)之間的隨機雙精度浮點數
+inline double random_double() {
+    static std::uniform_real_distribution<double> distribution(0.0, 1.0);
+    static std::mt19937 generator; // 梅森選轉演算法引擎
+    return distribution(generator);
+}
+
+// 回傳[min, max)之間的隨機雙精度浮點數
+inline double random_double(double min, double max){
+    return min + (max - min) * random_double();
+}
+
 // 全局基礎標頭檔打包引入
-#include "color.h"
 #include "interval.h"
 #include "ray.h"
 #include "vec3.h"
