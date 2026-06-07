@@ -13,12 +13,13 @@ public:
     double aspect_ratio = 1.0; // 影像寬高比
     int image_width = 100; // 影像像素寬度
     int samples_per_pixel = 10;   // 每個像素的隨機採樣數量 (預設 10)
+    int max_depth = 10; // 光線最大彈跳次數 (預設 10)
 
     void render(const hittable& world) {
         initialize();
 
         // 建立並寫入 image.ppm
-        std::ofstream outFile("image.ppm");
+        std::ofstream outFile("image.ppm", std::ios::out | std::ios::binary);
         outFile << "P3\n" << image_width << ' ' << image_height << "\n255\n";
     
         for (int j = 0; j < image_height; j++) {
@@ -28,7 +29,7 @@ public:
                 color pixel_color(0, 0, 0);
                 for (int sample = 0; sample < samples_per_pixel; sample++) {
                     ray r = get_ray(i, j);
-                    pixel_color += ray_color(r, world);
+                    pixel_color += ray_color(r, max_depth, world);
                 }
                 // 將加總的顏色乘以縮放因子 (除以 samples_per_pixel) 再寫入
                 write_color(outFile, pixel_samples_scale * pixel_color); 
@@ -85,11 +86,19 @@ private:
         return vec3(random_double() - 0.5, random_double() - 0.5, 0);
     }
 
-    color ray_color(const ray& r, const hittable& world) const {
+    color ray_color(const ray& r, int depth, const hittable& world) const {
+        // 安全防護鎖:如果彈跳次數歸零 代表光線精疲力竭 直接返回純黑(不再遞迴)
+        if (depth <= 0)
+            return color(0, 0, 0);
+
         hit_record rec;
         // 光線有效測試區間設定從0到無限
         if (world.hit(r, interval(0, infinity), rec)) {
-            return 0.5 * (rec.normal + color(1.0, 1.0, 1.0));
+            // 1.在撞擊點的法向量半球面上 隨機挑選一個反彈方向
+            vec3 direction = random_on_hemisphere(rec.normal);
+            // 2.遞迴發射一條新光線 起點為撞擊點 rec.p 方向為隨機彈跳方向
+            // 3.物理調變:每次彈跳 色彩能量率減一半(x0.5)
+            return 0.5 * ray_color(ray(rec.p, direction), depth - 1, world);
         }
     
         // 背景:沒撞到求救維持原本的天空

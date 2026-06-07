@@ -15,6 +15,7 @@ int main() {
     cam.aspect_ratio = 16.0 / 9.0;
     cam.image_width = 400;
     cam.samples_per_pixel = 100; // 每個像素的採樣數量(反鋸齒)
+    cam.max_depth = 50; // 光線最多可在場景內連續反彈50次
 
     // 一鍵啟動渲染流程
     cam.render(world);

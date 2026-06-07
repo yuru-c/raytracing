@@ -3,6 +3,7 @@
 
 #include <cmath>
 #include <iostream>
+#include "rtweekend.h"
 
 class vec3 {
     public:
@@ -43,13 +44,27 @@ class vec3 {
         double length() const {
             return std::sqrt(length_squared());
         }
-
+        // 雙精度長度平方計算
         double length_squared() const {
             return e[0]*e[0] + e[1]*e[1] + e[2]*e[2];
         }
+        // 產生一個XYZ接落在[0,1)之間的隨機向量
+        static vec3 random() {
+            return vec3(random_double(), random_double(), random_double());
+        }
+        // 產生一個XYZ接落在指定[min,max)之間的隨機向量
+        static vec3 random(double min, double max) {
+            return vec3(random_double(min,max), random_double(min,max), random_double(min,max));
+        }
+
+        private:
+        vec3* n = this;
 };
 
+
+using vec3 = class vec3; 
 using point3 = vec3;
+using color = vec3;
 
 inline std::ostream& operator<<(std::ostream& out, const vec3& v) {
     return out << v.e[0] << ' ' << v.e[1] << ' ' << v.e[2];
@@ -94,5 +109,24 @@ inline vec3 cross(const vec3& u, const vec3& v) {
 inline vec3 unit_vector(const vec3& v) {
     return v / v.length();
 }
+// 透過拒絕採樣法產生精準的單位球面隨機向量
+inline vec3 random_unit_vector() {
+    while (true) {
+        auto p = vec3::random(-1,1);    // 1.在正立方體內隨機抓一個3D點
+        auto lensq = p.length_squared();    // 2.計算他到中心點的距離平方
+        // 3.數值安全鎖:防止極度靠近中心的點(10^-160)引發除以0的黑洞危機
+        if (1e-160 < lensq && lensq <=1)
+            return p / sqrt(lensq); // 4.符合條件 將向量長度除以自身長度(單位化)並回傳
+    }
+}
+// 確保產生的隨機向量一定在表面法向量的同一側半球
+inline vec3 random_on_hemisphere(const vec3& normal) {
+    vec3 on_unit_sphere = random_unit_vector();
+    if (dot(on_unit_sphere, normal) > 0.0)  // 如果與法向量同方向(夾角為銳角)
+        return on_unit_sphere;
+    else    // 如果反方向 直接加上負號翻轉回來
+        return -on_unit_sphere;
+}
+
 
 #endif
