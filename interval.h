@@ -29,6 +29,12 @@ public:
 
     // 全局靜態快捷常數:空區間與全宇宙區間
     static const interval empty, universe;
+
+    double clamp(double x) const {
+        if (x < min) return min;
+        if (x > max) return max;
+        return x;
+    }
 };
 
 // 靜態成員變數初始化
