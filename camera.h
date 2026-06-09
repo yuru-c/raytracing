@@ -92,10 +92,10 @@ private:
             return color(0, 0, 0);
 
         hit_record rec;
-        // 光線有效測試區間設定從0到無限
-        if (world.hit(r, interval(0, infinity), rec)) {
-            // 1.在撞擊點的法向量半球面上 隨機挑選一個反彈方向
-            vec3 direction = random_on_hemisphere(rec.normal);
+        // 光線有效測試區間設定從0.001(避免陰影痤瘡shadow acne)到無限
+        if (world.hit(r, interval(0.001, infinity), rec)) {
+            // 1.在撞擊點的法向量半球面上 隨機挑選一個反彈方向 => 法向量直接加上單位球面隨機向量
+            vec3 direction = rec.normal + random_unit_vector();
             // 2.遞迴發射一條新光線 起點為撞擊點 rec.p 方向為隨機彈跳方向
             // 3.物理調變:每次彈跳 色彩能量率減一半(x0.5)
             return 0.5 * ray_color(ray(rec.p, direction), depth - 1, world);
