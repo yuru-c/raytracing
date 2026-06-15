@@ -4,6 +4,7 @@
 #include "rtweekend.h"
 #include "color.h"
 #include "hittable.h"
+#include "material.h"
 
 #include <iostream>
 #include <fstream> // 確保引入檔案流
@@ -94,11 +95,16 @@ private:
         hit_record rec;
         // 光線有效測試區間設定從0.001(避免陰影痤瘡shadow acne)到無限
         if (world.hit(r, interval(0.001, infinity), rec)) {
-            // 1.在撞擊點的法向量半球面上 隨機挑選一個反彈方向 => 法向量直接加上單位球面隨機向量
-            vec3 direction = rec.normal + random_unit_vector();
-            // 2.遞迴發射一條新光線 起點為撞擊點 rec.p 方向為隨機彈跳方向
-            // 3.物理調變:每次彈跳 色彩能量率減一半(x0.5)
-            return 0.5 * ray_color(ray(rec.p, direction), depth - 1, world);
+            ray scattered; // 準備用來接收材質產生的散射光線
+            color attenuation; //準備用來接收材質產生的顏色衰減率
+            
+            // 多型呼叫: 動態綁定 詢問撞擊點物體的材質如何散射光線
+            if (rec.mat->scatter(r, rec, attenuation, scattered))
+                // 如果成功散射 將衰減率乘以遞迴下一階段算出來的顏色
+                return attenuation * ray_color(scattered, depth-1, world);
+
+            // 如果材質把光吸收了 (scatter 返回false) 直接返回全黑
+            return color(0,0,0);
         }
     
         // 背景:沒撞到求救維持原本的天空

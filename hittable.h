@@ -4,11 +4,13 @@
 #include "ray.h"
 #include "interval.h"
 
+class material; //前向宣告 (forward declaration) 絕殺循環引用
 // 碰撞紀錄本:當光線射中物體 用來打包帶回所有幾何資訊
 class hit_record {
 public:
     point3 p; // 交點
     vec3 normal; // 法向量
+    shared_ptr<material> mat; // 新增 指向材質的智慧型指標
     double t; // 交點參數t    
     bool front_face; // true代表光線從外側撞擊 false從內側
 
