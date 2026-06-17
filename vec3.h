@@ -136,6 +136,19 @@ inline vec3 random_on_hemisphere(const vec3& normal) {
 inline vec3 reflect(const vec3& v, const vec3& n) {
     return v - 2*dot(v,n)*n;
 }
+// 幾何工具:計算光線穿透介質時的折射方向向量
+inline vec3 refract(const vec3& uv, const vec3& n, double etai_over_etat) {
+    // 1.內積計算射光與法向量的夾角餘弦值 cos
+    // std::fmin() 數值安全鎖
+    auto cos_theta = std::fmin(dot(-uv, n), 1.0);
+    // 2.折射光線 橫向平貼表面的垂直分量向量
+    vec3 r_out_perp = etai_over_etat * (uv + cos_theta*n);
+    // 3.折射光線 縱向沉入內部的平行分量向量
+    // std::fabs 取得絕對值
+    vec3 r_out_parallel = -std::sqrt(std::fabs(1.0 - r_out_perp.length_squared())) * n;
+    // 4.橫向與縱向分量相加
+    return r_out_perp + r_out_parallel;
+}
 
 
 #endif

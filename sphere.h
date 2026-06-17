@@ -7,8 +7,8 @@
 class sphere : public hittable {
 public:
     // 建構子:保護半徑不為負數
-    sphere(const point3& center, double radius)
-        : center(center), radius(std::fmax(0.0, radius)) {} // 成員 塞進類別私有變數 回傳0.0和radius之間比較大的那一個數字
+    sphere(const point3& center, double radius, shared_ptr<material> mat)
+        : center(center), radius(std::fmax(0.0, radius)), mat(mat) {} // 成員 塞進類別私有變數 回傳0.0和radius之間比較大的那一個數字
 
     bool hit(const ray& r, interval ray_t, hit_record& rec) const override {
         vec3 oc = center - r.origin();
@@ -40,6 +40,7 @@ public:
     
         // 讓紀錄本自動判定光線式從內側還式外側射入 並調整法向量
         rec.set_face_normal(r, outward_normal);
+        rec.mat = mat; // 核心綁定 把球體自己的材質主動交給撞擊紀錄
     
         return true;
     }
@@ -47,6 +48,7 @@ public:
 private:
     point3 center;
     double radius;
+    shared_ptr<material> mat; // 球體內部保存的材質擁有權
 };
 
 #endif

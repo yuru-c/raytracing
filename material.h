@@ -62,4 +62,44 @@ class metal : public material {
     double fuzz;
 };
 
+// 絕緣體類別:水 玻璃 鑽石等
+class dielectric : public material {
+    public:
+    // 建構子:傳入該材質在真空/空氣中的物理折射率
+    dielectric(double refraction_index) : refraction_index(refraction_index) {}
+    // 覆寫散射成員函式
+    bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered)
+    const override {
+        // 1.物理特性設定:將衰減率設為純白 (1.0,1.0,1.0)
+        // 玻璃球極度清澈 光線穿透石能量完全不被吸收 不產生任何退色
+        attenuation = color(1.0, 1.0, 1.0);
+        // 2.判斷光線進入還是離開玻璃 動態切換折射率比值(ri)
+        // true 空氣1.0射入玻璃n (1.0/n) ; false 玻璃n內部準備射出到空氣1.0 (n/1.0)
+        double ri = rec.front_face ? (1.0/refraction_index) : refraction_index;
+        // 3.將射入光線的方向向量進行單位化
+        vec3 unit_direction = unit_vector(r_in.direction());
+        // 4.呼叫vec3.h寫好的工具 算出折射後的全新射線方向向量
+        // vec3 refracted = refract(unit_direction, rec.normal, ri);
+        // a.算出入射角餘弦值:將反轉後的入射光與法向量做內積 std::fmin擋住精度溢出
+        double cos_theta = std::fmin(dot(-unit_direction, rec.normal), 1.0);
+        // b.三角恆等式
+        double sin_theta = std::sqrt(1.0 - cos_theta*cos_theta);
+        // c.依據斯奈爾定律 若大於1.0代表數學無解 觸發全反射
+        bool cannot_refract = ri * sin_theta > 1.0;
+        vec3 direction;
+        // d.無法折射就呼叫reflect讓光線反彈
+        if (cannot_refract)
+            direction = reflect(unit_direction, rec.normal);
+        else
+            direction = refract(unit_direction, rec.normal, ri);
+        // 5. 將相交點rec.p作為新起點 搭配折射方向 打包寫入輸出參數scattered中
+        scattered = ray(rec.p, direction);
+        // 6.回傳true 通報camera.h渲染引擎
+        return true;
+    }
+    private:
+        // 保存該材質的物理折射率數值
+        double refraction_index;
+};
+
 #endif
