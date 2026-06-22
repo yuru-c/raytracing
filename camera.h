@@ -15,6 +15,11 @@ public:
     int image_width = 100; // 影像像素寬度
     int samples_per_pixel = 10;   // 每個像素的隨機採樣數量 (預設 10)
     int max_depth = 10; // 光線最大彈跳次數 (預設 10)
+    double vfov = 90; // 垂直視野夾角fidld of view以角度為單位
+
+    point3 lookfrom = point3(0,0,0); // 相機在世界座標中的擺放位置
+    point3 lookat = point3(0,0,-1); // 相機目前正瞄準注視的3D空間目標點
+    vec3 vup = vec3(0,1,0); // 用來定義相機頭頂朝向的引導向量\
 
     void render(const hittable& world) {
         initialize();
@@ -48,6 +53,9 @@ private:
     vec3   pixel_delta_u;  // 往右一個像素的偏移量
     vec3   pixel_delta_v;  // 往下一個像素的偏移量
 
+    // 線性代數變數:定義相機局部座標系的三個互相正交單位基底軸向向量
+    vec3 u, v, w;
+
     void initialize() {
         image_height = int(image_width / aspect_ratio);
         image_height = (image_height < 1) ? 1 : image_height;
@@ -55,19 +63,37 @@ private:
         // 計算乘數因子
         pixel_samples_scale = 1.0 / samples_per_pixel;
 
-        center = point3(0, 0, 0);
+        // 相機中心為使用者指定的lookfrom座標點
+        center = lookfrom;
 
-        auto focal_length = 1.0;
-        auto viewport_height = 2.0;
+        // 尺寸 焦距動態計算 = 相機位置到目標點之間的歐幾里得距離值
+        auto focal_length = (lookfrom - lookat).length();
+        // 將使用者輸入的角度轉換為弧度
+        auto theta = degrees_to_radians(vfov);
+        // 三角函數:算出成像平面中心到頂點的相對半高度h
+        auto h = std::tan(theta/2);
+        // 真正視體總高度 2*h*焦距
+        auto viewport_height = 2 * h * focal_length;
+        
         auto viewport_width = viewport_height * (double(image_width) / image_height);
     
-        auto viewport_u = vec3(viewport_width, 0, 0);
-        auto viewport_v = vec3(0, -viewport_height, 0); // Y是負的 螢幕座標向下遞增
-    
+        // 利用三次連續運算建立orthonormal basis
+        // 第一步:用相機位置檢目標點 得到背離注視方向的Z軸 並單位化為W軸
+        w = unit_vector(lookfrom - lookat);
+        // 第二步:將頭頂引道向量vup與w軸進行外積(cross product)算出正右手邊的X軸 並單位化為u軸
+        u = unit_vector(cross(vup, w));
+        // 第三步:將w軸與右手邊u軸進行外積 反向倒推算出正交鎖定的正上方y軸 即v軸
+        v = cross(w, u);
+        
+        // 依據新建立的相機局部座標軸向(u,-v)去投射展開成視體的邊緣向量
+        vec3 viewport_u = viewport_width * u; // 沿著相機右手邊延伸的視體水平寬度向量
+        vec3 viewport_v = viewport_height * -v; // 沿著相機正上方反方向(向下)延伸的視體垂直高度向量
+        
         pixel_delta_u = viewport_u / image_width;
         pixel_delta_v = viewport_v / image_height;
     
-        auto viewport_upper_left = center - vec3(0, 0, focal_length) - viewport_u/2 - viewport_v/2;
+        // 視體左上角像素在世界座標系中的絕對位置 相機中心 - (焦距長度 * w軸向) - 水平向右向量的一半 - 垂直向下向量的一半
+        auto viewport_upper_left = center - (focal_length * w) - viewport_u/2 - viewport_v/2;
         pixel00_loc = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
     }
 

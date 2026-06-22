@@ -8,7 +8,7 @@
 int main() {
     // world 場景物件建構
     hittable_list world;
-
+    
     // 建立各式各樣不同的材質實例
     auto material_ground = make_shared<lambertian>(color(0.8, 0.8, 0.0)); // 綠黃色泥土
     auto material_center = make_shared<lambertian>(color(0.1, 0.2, 0.5)); // 藍色漫反射球
@@ -26,7 +26,7 @@ int main() {
     // 同圓心位置塞入半徑0.4的內球 綁定0.67的反向空氣材質
     world.add(make_shared<sphere>(point3(-1.0, 0.0, -1.0), 0.4,material_bubble));
     world.add(make_shared<sphere>(point3( 1.0, 0.0, -1.0), 0.5, material_right));
-    
+
     // camera 相機參數配置與啟動
     camera cam;
 
@@ -34,6 +34,10 @@ int main() {
     cam.image_width = 400;
     cam.samples_per_pixel = 100; // 每個像素的採樣數量(反鋸齒)
     cam.max_depth = 50; // 光線最多可在場景內連續反彈50次
+    cam.vfov = 20; // 垂直視野強行收窄到 20° 望遠變焦
+    cam.lookfrom = point3(-2, 2, 1); // 相機掛在左前方空中位置
+    cam.lookat = point3(0, 0, -1); // 鏡頭對準世界中心偏後方的目標點
+    cam.vup = vec3(0, 1, 0); // 保持地平線水平向上
 
     // 一鍵啟動渲染流程
     cam.render(world);
