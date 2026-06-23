@@ -124,6 +124,17 @@ inline vec3 random_unit_vector() {
             return p / sqrt(lensq); // 4.符合條件 將向量長度除以自身長度(單位化)並回傳
     }
 }
+// 在XY平面的二維單位圓盤(半徑<1)內隨機挑選一個點
+inline vec3 random_in_unit_disk() {
+    while (true) {
+        // 在 [-1, 1] x [-1, 1] 的二維正方形邊界內隨機生成一個 3D 向量 (Z軸鎖定為 0)
+        auto p = vec3(random_double(-1,1), random_double(-1,1), 0);
+        // 該點長度平方小於1.0 代表點落在圓圈內部 回傳
+        if (p.length_squared() < 1)
+            return p;
+        // 否則落在正方形四個角落的圓外邊緣 進入下次迴圈
+    }
+}
 // 確保產生的隨機向量一定在表面法向量的同一側半球
 inline vec3 random_on_hemisphere(const vec3& normal) {
     vec3 on_unit_sphere = random_unit_vector();

@@ -21,6 +21,10 @@ public:
     point3 lookat = point3(0,0,-1); // 相機目前正瞄準注視的3D空間目標點
     vec3 vup = vec3(0,1,0); // 用來定義相機頭頂朝向的引導向量\
 
+    // 景深
+    double defocus_angle = 0; // 模擬光圈大小:射線穿過每個像素的隨機發散錐角(角度制 0代表不開景深)
+    double focus_dist = 10; // 模擬對焦平面距離:從相機中心到完美對焦平面的絕對距離
+
     void render(const hittable& world) {
         initialize();
 
@@ -56,6 +60,10 @@ private:
     // 線性代數變數:定義相機局部座標系的三個互相正交單位基底軸向向量
     vec3 u, v, w;
 
+    // 定義實體光圈圓盤在X與Y方向上的半徑向量
+    vec3 defocus_disk_u; // 景深圓盤的水平方向半徑
+    vec3 defocus_disk_v; // 景深圓盤的垂直方向半徑
+
     void initialize() {
         image_height = int(image_width / aspect_ratio);
         image_height = (image_height < 1) ? 1 : image_height;
@@ -67,13 +75,13 @@ private:
         center = lookfrom;
 
         // 尺寸 焦距動態計算 = 相機位置到目標點之間的歐幾里得距離值
-        auto focal_length = (lookfrom - lookat).length();
+        // auto focal_length = (lookfrom - lookat).length();
         // 將使用者輸入的角度轉換為弧度
         auto theta = degrees_to_radians(vfov);
         // 三角函數:算出成像平面中心到頂點的相對半高度h
         auto h = std::tan(theta/2);
         // 真正視體總高度 2*h*焦距
-        auto viewport_height = 2 * h * focal_length;
+        auto viewport_height = 2 * h * focus_dist;
         
         auto viewport_width = viewport_height * (double(image_width) / image_height);
     
@@ -93,19 +101,39 @@ private:
         pixel_delta_v = viewport_v / image_height;
     
         // 視體左上角像素在世界座標系中的絕對位置 相機中心 - (焦距長度 * w軸向) - 水平向右向量的一半 - 垂直向下向量的一半
-        auto viewport_upper_left = center - (focal_length * w) - viewport_u/2 - viewport_v/2;
+        auto viewport_upper_left = center - (focus_dist * w) - viewport_u/2 - viewport_v/2;
         pixel00_loc = viewport_upper_left + 0.5 * (pixel_delta_u + pixel_delta_v);
+
+        // 計算相機虛擬光圈圓盤的物理半徑大小 半徑=對焦距離*tan(發散角/2)
+        auto defocus_radius = focus_dist * std::tan(degrees_to_radians(defocus_angle / 2));
+
+        // 將純量半徑乘以相機的局部軸向 u與v 轉化為3D空間中的半徑軸向量
+        defocus_disk_u = u * defocus_radius;
+        defocus_disk_v = v * defocus_radius;
+
     }
 
     // 建立一條射向像素 (i,j) 周邊隨機採樣點的光線
     ray get_ray(int i, int j) const {
+        // 1.在當前像素 (i,j) 內部進行二維反鋸齒微幅隨機偏移
         auto offset = sample_square();
         auto pixel_sample = pixel00_loc + ((i + offset.x()) * pixel_delta_u) + ((j + offset.y()) * pixel_delta_v);
 
-        auto ray_origin = center;
+        // 2.如果 defocus_angle 設為0 代表不開景深 起點直接是相機中心center
+        //    如果開啟景深 呼叫隨機函式 讓光線起點在實體光圈圓盤內部進行隨機漂移
+        auto ray_origin = (defocus_angle <= 0) ? center : defocus_disk_sample();
+        // 3.方向向量=焦點平面上的像素目標點-剛剛在光圈上隨機抽樣出來的起點座標
         auto ray_direction = pixel_sample - ray_origin;
 
         return ray(ray_origin, ray_direction);
+    }
+
+    // 在實體相機的虛擬光圈圓盤內隨機抽取一個3D空間位置點
+    point3 defocus_disk_sample() const {
+        // 1.取得二為單位圓盤內的隨機點
+        auto p = random_in_unit_disk();
+        // 2.將二維隨機點對應到相機的u軸與v軸上 並與相機中心疊加組裝出3D世界座標並回傳
+        return center + (p[0] * defocus_disk_u) + (p[1] * defocus_disk_v);
     }
 
     // 產生一個位於 [-0.5, -0.5] 到 [0.5, 0.5] 單位正方形內的隨機偏移向量

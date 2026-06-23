@@ -39,6 +39,10 @@ int main() {
     cam.lookat = point3(0, 0, -1); // 鏡頭對準世界中心偏後方的目標點
     cam.vup = vec3(0, 1, 0); // 保持地平線水平向上
 
+    // 光圈設定
+    cam.defocus_angle = 10.0; // 設定發散圓錐角為 10° 光圈開得非常大
+    cam.focus_dist = 3.4; // 設定完美對焦距離3.4單位 鎖定在中間藍色小球身上
+
     // 一鍵啟動渲染流程
     cam.render(world);
 }
