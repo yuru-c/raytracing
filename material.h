@@ -16,7 +16,7 @@ class material {
         }
 };
 
-// 繼承材質基底類別
+// 繼承材質基底類別 漫反射材質
 class lambertian : public material {
     public:
         // 建構子傳入反照率(色彩向量)
@@ -30,7 +30,8 @@ class lambertian : public material {
             if (scatter_direction.near_zero())
                 scatter_direction = rec.normal; // 如歸零 就強制讓他等於法向量
             
-            scattered = ray(rec.p, scatter_direction);
+            //新生成的反射光線，必須精確繼承入射光線的時間 r_in.time()
+            scattered = ray(rec.p, scatter_direction, r_in.time());
             attenuation = albedo; // 衰減率直接等於材質本身的顏色(反照率)
             return true;
         }
@@ -50,8 +51,8 @@ class metal : public material {
         vec3 reflected = reflect(r_in.direction(), rec.normal);
         // 先將反射向量轉為長度1 再疊加上模糊擾動
         reflected = unit_vector(reflected) + (fuzz * random_unit_vector());
-        // 2.建立從相交點rec.p出發的反射光線
-        scattered = ray(rec.p, reflected);
+        // 2.建立從相交點rec.p出發的反射光線 / 新生成的金屬反射光線，同樣繼承入射光線的時間 r_in.time()
+        scattered = ray(rec.p, reflected, r_in.time());
         // 3.反射率(衰減率)等於金屬自身的顏色
         attenuation = albedo;
         // 只有當散射方向朝向表面外側(與法向量內積大於0)時才算反射成功
@@ -92,8 +93,8 @@ class dielectric : public material {
             direction = reflect(unit_direction, rec.normal);
         else
             direction = refract(unit_direction, rec.normal, ri);
-        // 5. 將相交點rec.p作為新起點 搭配折射方向 打包寫入輸出參數scattered中
-        scattered = ray(rec.p, direction);
+        // 5. 將相交點rec.p作為新起點 搭配折射方向 打包寫入輸出參數scattered中 / 新生成的折射或全反射光線，同樣繼承入射光線的時間 r_in.time()
+        scattered = ray(rec.p, direction, r_in.time());
         // 6.回傳true 通報camera.h渲染引擎
         return true;
     }

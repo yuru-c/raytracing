@@ -6,12 +6,22 @@
 
 class sphere : public hittable {
 public:
-    // 建構子:保護半徑不為負數
+    // 建構子:靜態球體
+    // 物理巧思：利用私有變數 center(static_center, vec3(0,0,0)) 構造一條方向為零向量的「死線」
+    // 當任意時間 t 傳入時，center.at(t) 永遠都會回傳初始點 static_center，完美相容舊版
     sphere(const point3& center, double radius, shared_ptr<material> mat)
-        : center(center), radius(std::fmax(0.0, radius)), mat(mat) {} // 成員 塞進類別私有變數 回傳0.0和radius之間比較大的那一個數字
+        : center(center, vec3(0,0,0)), radius(std::fmax(0, radius)), mat(mat) {} // 成員 塞進類別私有變數 回傳0.0和radius之間比較大的那一個數字
+
+    // 建構子:動態移動球體moving sphere
+    // 物理巧思：射線起點為 time=0 的 center1，而射線方向向量設為位移量（center2 - center1）
+    // 如此一來，當時間 t 傳入時，center.at(t) 就等於 center1 + t * (center2 - center1)，剛好是標準的線性插值
+    sphere(const point3& center1, const point3& center2, double radius, shared_ptr<material> mat)
+        : center(center1, center2 - center1), radius(std::fmax(0,radius)), mat(mat) {}
 
     bool hit(const ray& r, interval ray_t, hit_record& rec) const override {
-        vec3 oc = center - r.origin();
+        // 透過軌跡射線 center.at() 一鍵算出該球體在「該瞬間」處於 3D 空間的哪個確切位置
+        point3 current_center = center.at(r.time());
+        vec3 oc = current_center - r.origin();
         auto a = r.direction().length_squared();
         auto h = dot(r.direction(), oc);
         auto c = oc.length_squared() - radius*radius;
@@ -36,17 +46,19 @@ public:
         rec.p = r.at(rec.t);
 
         // 標準朝外的法向量(交點-球心 再除以半徑剛好完成標準化
-        vec3 outward_normal = (rec.p - center) / radius;
+        vec3 outward_normal = (rec.p - current_center) / radius;
     
         // 讓紀錄本自動判定光線式從內側還式外側射入 並調整法向量
         rec.set_face_normal(r, outward_normal);
+        // 取得二維紋理座標
+        // get_sphere_uv(outward_normal, rec.u, rec.v);
         rec.mat = mat; // 核心綁定 把球體自己的材質主動交給撞擊紀錄
     
         return true;
     }
 
 private:
-    point3 center;
+    ray center;
     double radius;
     shared_ptr<material> mat; // 球體內部保存的材質擁有權
 };

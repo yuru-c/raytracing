@@ -125,7 +125,10 @@ private:
         // 3.方向向量=焦點平面上的像素目標點-剛剛在光圈上隨機抽樣出來的起點座標
         auto ray_direction = pixel_sample - ray_origin;
 
-        return ray(ray_origin, ray_direction);
+        // 在快門開啟期間 [0,1) 內隨機抽選一個時間戳記
+        auto ray_time = random_double();
+
+        return ray(ray_origin, ray_direction, ray_time);
     }
 
     // 在實體相機的虛擬光圈圓盤內隨機抽取一個3D空間位置點

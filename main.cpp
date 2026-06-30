@@ -29,8 +29,11 @@ int main() {
                     // 🔴 80% 的機率生成：漫反射小球（Diffuse）
                     // 物理魔法：兩個隨機顏色向量進行「分量相乘（Hadamard product）」，可以自然調配出更飽和、層次更豐富的隨機色調值值
                     auto albedo = color::random() * color::random();                    
-                    sphere_material = make_shared<lambertian>(albedo);                    
-                    world.add(make_shared<sphere>(center, 0.2, sphere_material));                
+                    sphere_material = make_shared<lambertian>(albedo);     
+                    // 計算時間 t=1 時的終點球心位置：在 Y 軸方向加上一個 [0, 0.5) 之間的隨機彈跳高度
+                    auto center2 = center + vec3(0, random_double(0,.5), 0);                    
+                    // 呼叫全新動態球體建構子：傳入 center1 與 center2
+                    world.add(make_shared<sphere>(center, center2, 0.2, sphere_material));
                 } else if (choose_mat < 0.95) {                    
                     // 🟡 15% 的機率生成：磨砂金屬小球（Metal）
                     auto albedo = color::random(0.5, 1);    // 偏亮、高反射率的隨機金屬顏色值
@@ -62,7 +65,7 @@ int main() {
     camera cam;
 
     cam.aspect_ratio = 16.0 / 9.0;
-    cam.image_width = 1200;
+    cam.image_width = 400;
     cam.samples_per_pixel = 100; // 每個像素的採樣數量(反鋸齒)
     cam.max_depth = 50; // 光線最多可在場景內連續反彈50次
     cam.vfov = 20; // 垂直視野強行收窄到 20° 望遠變焦
