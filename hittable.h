@@ -3,6 +3,7 @@
 
 #include "ray.h"
 #include "interval.h"
+#include "aabb.h"
 
 class material; //前向宣告 (forward declaration) 絕殺循環引用
 // 碰撞紀錄本:當光線射中物體 用來打包帶回所有幾何資訊
@@ -30,6 +31,9 @@ public:
     // 純虛擬函式:子類別必須實作「光線如何與自己求交點」的邏輯
     // 只有當交點的t落在[ray_tmin, ray_tmax]區間才算有較撞擊
     virtual bool hit(const ray& r, interval ray_t, hit_record& rec) const = 0;
+
+    // 強迫所有子類別實作此方法 以便樹狀節點收集並融合邊界
+    virtual aabb bounding_box() const = 0;
 };
 
 #endif

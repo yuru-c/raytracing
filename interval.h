@@ -12,6 +12,11 @@ public:
 
     interval(double min, double max) : min(min), max(max) {}
 
+    // 融合建構子:傳入兩個區間a b自動建立一個能將a與b包夾的最窄區間
+    interval(const interval& a, const interval& b) {
+        min = a.min <= b.min ? a.min : b.min;
+        max = a.max >= b.max ? a.max : b.max;
+    }
     // 區間大小(長度)
     double size() const {
         return max - min;
@@ -34,6 +39,12 @@ public:
         if (x < min) return min;
         if (x > max) return max;
         return x;
+    }
+
+    // 區間擴展(padding)方法:當射線與盒子邊緣完全平行或極度貼合時(d_x=0) 加上delta微服填充避免nan或邊緣穿幫
+    interval expand(double delta) const {
+        auto padding = delta / 2.0;
+        return interval(min - padding, max + padding);
     }
 };
 
