@@ -32,6 +32,11 @@ inline double random_double(double min, double max){
     return min + (max - min) * random_double();
 }
 
+// 新增區間隨機整數生成器
+inline int random_int(int min, int max) {
+    return int(random_double(min, max+1));
+}
+
 // 全局基礎標頭檔打包引入
 #include "interval.h"
 #include "ray.h"

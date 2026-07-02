@@ -61,6 +61,20 @@ class aabb {
             }
             return true; // 三個軸向完美交疊 射線切實貫穿包圍盒
         }
+
+        // 最長軸向判定:比較XYZ三個維度的包圍盒尺寸
+        int longest_axis() const {
+            if (x.size() > y.size())
+                return x.size() > z.size() ? 0 : 2;
+            else
+                return y.size() > z.size() ? 1 : 2;
+        }
+
+        static const aabb empty, universe;
 };
+
+// 在類別外部為靜態常量賦值
+inline const aabb aabb::empty = aabb(interval::empty, interval::empty, interval::empty);
+inline const aabb aabb::universe = aabb(interval::universe, interval::universe, interval::universe);
 
 #endif

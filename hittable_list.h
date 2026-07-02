@@ -26,6 +26,8 @@ public:
     // 塞入新物件到場景
     void add(shared_ptr<hittable> object) {
         objects.push_back(object);
+        // 將原本的總包圍盒與新物件的包圍盒二合一
+        bbox = aabb(bbox, object->bounding_box());
     }
 
     // 核心求交點演算法 遍歷所有物件 找出離相機最近的交點
@@ -47,6 +49,12 @@ public:
 
         return hit_anything;
     }
+
+    // 實作虛擬介面:直接回傳算好的總bbox
+    aabb bounding_box() const override {return bbox;}
+
+    private:
+    aabb bbox; // 總包圍盒
 };
 
 #endif
