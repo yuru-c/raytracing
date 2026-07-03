@@ -5,14 +5,16 @@
 #include "hittable_list.h"
 #include "material.h"
 #include "sphere.h"
+#include "texture.h"
 
-int main() {
+// 場景1:原本的動態隨機漫天球體
+void bouncing_spheres() {
     // world 場景物件建構
     hittable_list world;
     
     // 建立一個中性灰色的漫反射材質，當作一望無際的宏大地面
-    auto ground_material = make_shared<lambertian>(color(0.5, 0.5, 0.5));    
-    world.add(make_shared<sphere>(point3(0,-1000,0), 1000, ground_material));    
+    auto checker = make_shared<checker_texture>(0.32, color(.2, .3, .1), color(.9, .9, .9));    
+    world.add(make_shared<sphere>(point3(0,-1000,0), 1000, make_shared<lambertian>(checker)));    
     
     // 👈 雙重嵌套迴圈：在 X 軸與 Z 軸從 -11 到 +10 的網格區間內（共 22x22 = 484 個潛在位置）隨機撒球
     for (int a = -11; a < 11; a++) {        
@@ -83,4 +85,62 @@ int main() {
 
     // 一鍵啟動渲染流程
     cam.render(world);
+}
+
+// 場景2:兩顆巨大的 3D 空間格子球
+void checkered_spheres() {
+    hittable_list world;
+
+    // 建立一個縮放係數為0.32的棋盤格紋理
+    auto checker = make_shared<checker_texture>(0.32, color(.2, .3, .1), color(.9, .9, .9));
+
+    // 將同一個材質套用給上下相疊的兩顆大球
+    world.add(make_shared<sphere>(point3(0,-10, 0), 10, make_shared<lambertian>(checker)));
+    world.add(make_shared<sphere>(point3(0, 10, 0), 10, make_shared<lambertian>(checker)));
+
+    camera cam;
+    cam.aspect_ratio      = 16.0 / 9.0;
+    cam.image_width       = 400;
+    cam.samples_per_pixel = 100;
+    cam.max_depth         = 50;
+    
+    cam.vfov     = 20;
+    cam.lookfrom = point3(13,2,3);
+    cam.lookat   = point3(0,0,0);
+    cam.vup      = vec3(0,1,0);
+    cam.defocus_angle = 0;
+
+    cam.render(world);
+}
+
+// 場景3:貼上地球表面圖片的蔚藍地球儀
+void earth() {
+    // 讀取執行目標下的地球貼圖
+    auto earth_texture = make_shared<image_texture>("earthmap.jpg");
+    auto earth_surface = make_shared<lambertian>(earth_texture);
+    auto globe = make_shared<sphere>(point3(0,0,0), 2, earth_surface);
+
+    camera cam;
+    cam.aspect_ratio      = 16.0 / 9.0;
+    cam.image_width       = 400;
+    cam.samples_per_pixel = 100;
+    cam.max_depth         = 50;
+    
+    cam.vfov     = 20;
+    cam.lookfrom = point3(0,0,12); // 正對著 z 軸看過去
+    cam.lookat   = point3(0,0,0);
+    cam.vup      = vec3(0,1,0);
+    cam.defocus_angle = 0;
+
+    cam.render(hittable_list(globe));
+}
+
+int main() {
+    switch (3){
+        case 1: bouncing_spheres(); break;
+        case 2: checkered_spheres(); break;
+        case 3: earth(); break;
+    }
+    
+    
 }

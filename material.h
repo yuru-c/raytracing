@@ -2,6 +2,7 @@
 #define MATERIAL_H
 
 #include "hittable.h"
+#include "texture.h"
 
 class material {
     public:
@@ -19,8 +20,10 @@ class material {
 // 繼承材質基底類別 漫反射材質
 class lambertian : public material {
     public:
-        // 建構子傳入反照率(色彩向量)
-        lambertian(const color& albedo) : albedo(albedo) {}
+        // 舊版相容 傳入純color內部自動包裝成solid_color紋理
+        lambertian(const color& albedo) : tex(make_shared<solid_color>(albedo)) {}
+        // 新版 允許傳入任意紋理(棋盤或圖片)
+        lambertian(shared_ptr<texture> tex) : tex(tex) {}
 
         // 覆寫(override)散射行為
         bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered)
@@ -30,13 +33,14 @@ class lambertian : public material {
             if (scatter_direction.near_zero())
                 scatter_direction = rec.normal; // 如歸零 就強制讓他等於法向量
             
-            //新生成的反射光線，必須精確繼承入射光線的時間 r_in.time()
+            // 新生成的反射光線，必須精確繼承入射光線的時間 r_in.time()
             scattered = ray(rec.p, scatter_direction, r_in.time());
-            attenuation = albedo; // 衰減率直接等於材質本身的顏色(反照率)
+            // 材質的紋理中 根據撞擊點的(u,v,p)採樣出顏色衰減值值
+            attenuation = tex->value(rec.u, rec.v, rec.p); // 衰減率直接等於材質本身的顏色(反照率)
             return true;
         }
     private:
-        color albedo;
+        shared_ptr<texture> tex; // 紋理指標
 };
 
 // 金屬材質類別

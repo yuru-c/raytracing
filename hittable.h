@@ -12,7 +12,9 @@ public:
     point3 p; // 交點
     vec3 normal; // 法向量
     shared_ptr<material> mat; // 新增 指向材質的智慧型指標
-    double t; // 交點參數t    
+    double t; // 交點參數t
+    double u; // U座標[0,1]
+    double v; // V座標[0,1]
     bool front_face; // true代表光線從外側撞擊 false從內側
 
     // 依光線入射方向自動校正法向量 永遠與光線迎面對決

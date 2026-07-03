@@ -66,6 +66,8 @@ public:
         rec.set_face_normal(r, outward_normal);
         // 取得二維紋理座標
         // get_sphere_uv(outward_normal, rec.u, rec.v);
+        // 利用單位外法向量 相當於原點球心出發的點 計算出該點UV座標
+        get_sphere_uv(outward_normal, rec.u, rec.v);
         rec.mat = mat; // 核心綁定 把球體自己的材質主動交給撞擊紀錄
     
         return true;
@@ -79,6 +81,18 @@ private:
     double radius;
     shared_ptr<material> mat; // 球體內部保存的材質擁有權
     aabb bbox; // 球體的包圍盒
+
+    static void get_sphere_uv(const point3& p, double& u, double& v) {
+        // p 傳入一個半徑為1 中心在原點的球面上某點
+        // u 回傳值[0,1] 代表圍繞Y軸旋轉的水平夾角(從X=-1開始)
+        // v 回傳值[0,1] 代表從南極點Y=-1到北極點Y=+1的垂直夾角
+
+        auto theta = std::acos(-p.y());
+        auto phi = std::atan2(-p.z(), p.x()) + pi;
+
+        u = phi / (2 * pi);
+        v = theta / pi;
+    }
 };
 
 #endif
