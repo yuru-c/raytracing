@@ -3,6 +3,7 @@
 
 #include "rtweekend.h"
 #include "rtw_stb_image.h"
+#include "perlin.h"
 #include <cmath>
 
 // 紋理抽象基類
@@ -83,6 +84,29 @@ class image_texture : public texture {
 
     private:
         rtw_image image; // 內部持有封裝好的圖片物件
+};
+
+// 初版雜訊紋理
+class noise_texture : public texture {
+    public:
+        // 預設建構子 預設1.0倍
+        noise_texture() : scale(1.0) {}
+
+        // 自訂建構子 允許傳入縮放系數控制密集度
+        noise_texture(double scale) : scale(scale) {}
+
+            color value(double u, double v, const point3& p) const override {
+                // 將雜訊回傳的0-1純標量乘上白色(1,1,1) 得到不同深淺的灰色 X
+                // 大理石公式
+                // 1.scale*p.z():在Z軸方向建立基礎正弦條紋
+                // 2.10.0*noise.turb(p,7):用7層深度的紊流強烈扭曲正弦波的相位
+                // 3.(1.0+sin(...))*0.5:將sin的[-1,1]範圍放到安全的[0,1]
+                return color(0.5, 0.5, 0.5) * (1.0 + std::sin(scale * p.z() + 10.0 * noise.turb(p, 7)));       
+        }
+
+    private:
+        perlin noise;
+        double scale;
 };
 
 #endif
