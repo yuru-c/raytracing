@@ -7,14 +7,18 @@ class aabb {
     public:
         interval x, y, z; // 3D包圍盒由XYZ三個維度的區間共同決定
         aabb() {} // 三個區間皆無空 代表這是一個空的包圍盒
+        // 在三個區間傳入的建構子中調用墊高函式
         aabb(const interval& x, const interval& y, const interval& z)
-            : x(x), y(y), z(z) {}
+            : x(x), y(y), z(z) {
+                pad_to_minimums();
+            }
         
-        // 建構子:傳入任意兩個3D頂點點座標A B 自動拉出一個立方體包圍盒
+        // 建構子:傳入任意兩個3D頂點點座標A B 自動拉出一個立方體包圍盒 -> 在兩點傳入的建構子中調用墊高函式
         aabb(const point3& a, const point3& b) {
-            x = (a[0] <= b[0]) ? interval(a[0],b[0]) : interval(b[0], a[0]);
-            y = (a[1] <= b[1]) ? interval(a[1], b[1]) : interval(b[1], a[1]);
-            z = (a[2] <= b[2]) ? interval(a[2], b[2]) : interval(b[2], a[2]);
+            x = interval(std::fmin(a[0],b[0]), std::fmax(a[0],b[0]));
+            y = interval(std::fmin(a[1],b[1]), std::fmax(a[1],b[1]));
+            z = interval(std::fmin(a[2],b[2]), std::fmax(a[2],b[2]));
+            pad_to_minimums();
         }
 
         // 建構子:傳入兩個現成的AABB包圍盒 融合出一個能包住這兩個盒子的集大包圍盒
@@ -71,6 +75,15 @@ class aabb {
         }
 
         static const aabb empty, universe;
+
+    private:
+        // 防止包圍盒厚度為零的墊高機制
+        void pad_to_minimums() {
+            double delta = 0.0001;
+            if (x.size() < delta) x = x.expand(delta);
+            if (y.size() < delta) y = y.expand(delta);
+            if (z.size() < delta) z = z.expand(delta);
+        }
 };
 
 // 在類別外部為靜態常量賦值
