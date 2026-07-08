@@ -15,11 +15,12 @@ public:
     int image_width = 100; // 影像像素寬度
     int samples_per_pixel = 10;   // 每個像素的隨機採樣數量 (預設 10)
     int max_depth = 10; // 光線最大彈跳次數 (預設 10)
+    color background; // 場景背景色彩
     double vfov = 90; // 垂直視野夾角fidld of view以角度為單位
 
     point3 lookfrom = point3(0,0,0); // 相機在世界座標中的擺放位置
     point3 lookat = point3(0,0,-1); // 相機目前正瞄準注視的3D空間目標點
-    vec3 vup = vec3(0,1,0); // 用來定義相機頭頂朝向的引導向量\
+    vec3 vup = vec3(0,1,0); // 用來定義相機頭頂朝向的引導向量
 
     // 景深
     double defocus_angle = 0; // 模擬光圈大小:射線穿過每個像素的隨機發散錐角(角度制 0代表不開景深)
@@ -151,24 +152,31 @@ private:
 
         hit_record rec;
         // 光線有效測試區間設定從0.001(避免陰影痤瘡shadow acne)到無限
-        if (world.hit(r, interval(0.001, infinity), rec)) {
-            ray scattered; // 準備用來接收材質產生的散射光線
-            color attenuation; //準備用來接收材質產生的顏色衰減率
+        // -> 1.如果射線沒有擊中 回傳設定好的背景
+        if (!world.hit(r, interval(0.001, infinity), rec))
+            return background;
+            
+        ray scattered; // 準備用來接收材質產生的散射光線
+        color attenuation; //準備用來接收材質產生的顏色衰減率
+
+        // 2.取得交點材質主動發出光線顏色
+        color color_from_emission = rec.mat->emitted(rec.u, rec.v, rec.p);
             
             // 多型呼叫: 動態綁定 詢問撞擊點物體的材質如何散射光線
-            if (rec.mat->scatter(r, rec, attenuation, scattered))
-                // 如果成功散射 將衰減率乘以遞迴下一階段算出來的顏色
-                return attenuation * ray_color(scattered, depth-1, world);
-
-            // 如果材質把光吸收了 (scatter 返回false) 直接返回全黑
-            return color(0,0,0);
+            // -> 如果材質不散射光線 則漫反射計算終止 直接回傳材質發光的光
+            if (!rec.mat->scatter(r, rec, attenuation, scattered))
+                return color_from_emission;
+                
+            // 若材質會散射(一般漫反射或金屬) 自身發光與反射收集的光疊加
+            color color_from_scatter = attenuation * ray_color(scattered, depth-1, world);
+            return color_from_emission + color_from_scatter;
         }
     
         // 背景:沒撞到求救維持原本的天空
-        vec3 unit_direction = unit_vector(r.direction());
-        auto a = 0.5 * (unit_direction.y() + 1.0);
-        return (1.0 - a) * color(1.0, 1.0, 1.0) + a * color(0.5, 0.7, 1.0);
-    }
+        // vec3 unit_direction = unit_vector(r.direction());
+        // auto a = 0.5 * (unit_direction.y() + 1.0);
+        // return (1.0 - a) * color(1.0, 1.0, 1.0) + a * color(0.5, 0.7, 1.0);
+    
 };
 
 #endif

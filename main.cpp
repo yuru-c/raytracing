@@ -75,6 +75,7 @@ void bouncing_spheres() {
     cam.image_width = 400;
     cam.samples_per_pixel = 100; // 每個像素的採樣數量(反鋸齒)
     cam.max_depth = 50; // 光線最多可在場景內連續反彈50次
+    cam.background = color(0.70, 0.80, 1.00); // 天空藍白色
     cam.vfov = 20; // 垂直視野強行收窄到 20° 望遠變焦
     cam.lookfrom = point3(13, 2, 3); // 相機拉到極遠的斜高空
     cam.lookat = point3(0, 0, 0); // 注視座標原點
@@ -104,6 +105,7 @@ void checkered_spheres() {
     cam.image_width       = 400;
     cam.samples_per_pixel = 100;
     cam.max_depth         = 50;
+    cam.background = color(0.70, 0.80, 1.00); // 天空藍白色
     
     cam.vfov     = 20;
     cam.lookfrom = point3(13,2,3);
@@ -126,6 +128,7 @@ void earth() {
     cam.image_width       = 400;
     cam.samples_per_pixel = 100;
     cam.max_depth         = 50;
+    cam.background = color(0.70, 0.80, 1.00); // 天空藍白色
     
     cam.vfov     = 20;
     cam.lookfrom = point3(0,0,12); // 正對著 z 軸看過去
@@ -150,6 +153,7 @@ void perlin_spheres() {
     cam.image_width       = 400;
     cam.samples_per_pixel = 100;
     cam.max_depth         = 50;
+    cam.background = color(0.70, 0.80, 1.00); // 天空藍白色
     
     cam.vfov     = 20;
     cam.lookfrom = point3(13,2,3);
@@ -183,6 +187,7 @@ void quads() {
     cam.image_width       = 400;
     cam.samples_per_pixel = 100;
     cam.max_depth         = 50;
+    cam.background = color(0.70, 0.80, 1.00); // 天空藍白色
     
     cam.vfov     = 80;
     cam.lookfrom = point3(0,0,9);
@@ -193,13 +198,88 @@ void quads() {
     cam.render(world);
 }
 
+// 場景6:
+void simple_light() {
+    hittable_list world;
+
+    // 建立柏林雜訊紋理
+    auto pertext = make_shared<noise_texture>(4);
+
+    // 地面大球體與空中小球體(一般漫反射材質)
+    world.add(make_shared<sphere>(point3(0,-1000,0), 1000, make_shared<lambertian>(pertext)));
+    world.add(make_shared<sphere>(point3(0,2,0), 2, make_shared<lambertian>(pertext)));
+
+    // 建立發光強度為(4,4,4)的超亮白光材質
+    auto difflight = make_shared<diffuse_light>(color(4,4,4));    
+
+    // 在右上方放置一個發光四邊形(矩形燈)
+    world.add(make_shared<sphere>(point3(0,7,0), 2, difflight));
+
+    // （可選）原著 Listing 60 提到的發光球體，如果想加也可以取消註解：
+    world.add(make_shared<quad>(point3(3,1,-2), vec3(2,0,0), vec3(0,2,0), difflight));
+
+    camera cam;
+    cam.aspect_ratio      = 16.0 / 9.0;
+    cam.image_width       = 400;
+    cam.samples_per_pixel = 100;
+    cam.max_depth         = 50;
+
+    // 背景設為純黑 確保唯一光線來源就是發光四邊形
+    cam.background        = color(0,0,0);
+
+    cam.vfov     = 20;
+    cam.lookfrom = point3(26,3,6);
+    cam.lookat   = point3(0,2,0);
+    cam.vup      = vec3(0,1,0);
+    cam.defocus_angle = 0;
+
+    cam.render(world);
+}
+
+// 場景7:空康乃爾盒子場景
+void cornell_box() {
+    hittable_list world;
+
+    // 1.定義3種漫反射材質與1種強發光材質
+    auto red   = make_shared<lambertian>(color(.65, .05, .05));
+    auto white = make_shared<lambertian>(color(.73, .73, .73));
+    auto green = make_shared<lambertian>(color(.12, .45, .15));
+    auto light = make_shared<diffuse_light>(color(15, 15, 15)); // 強烈的白光
+
+    // 2.構建5面牆壁與1個天空板光源(全由quad四邊形組成)
+    world.add(make_shared<quad>(point3(555,0,0), vec3(0,555,0), vec3(0,0,555), green)); // 右牆 (綠)
+    world.add(make_shared<quad>(point3(0,0,0), vec3(0,555,0), vec3(0,0,555), red));   // 左牆 (紅)
+    world.add(make_shared<quad>(point3(343, 554, 332), vec3(-130,0,0), vec3(0,0,-105), light)); // 頂光
+    world.add(make_shared<quad>(point3(0,0,0), vec3(555,0,0), vec3(0,0,555), white)); // 地板 (白)
+    world.add(make_shared<quad>(point3(555,555,555), vec3(-555,0,0), vec3(0,0,-555), white)); // 天花板 (白)
+    world.add(make_shared<quad>(point3(0,0,555), vec3(555,0,0), vec3(0,555,0), white)); // 後牆 (白)
+
+    camera cam;
+    cam.aspect_ratio = 1.0;
+    cam.image_width = 600;  // 提高解析度以觀察質感
+    cam.samples_per_pixel = 200;  // 採樣數提高到 200
+    cam.max_depth = 50;
+    cam.background = color(0,0,0); // 純黑背景
+
+    cam.vfov     = 40;
+    cam.lookfrom = point3(278, 278, -800);
+    cam.lookat   = point3(278, 278, 0);
+    cam.vup      = vec3(0,1,0);
+    cam.defocus_angle = 0;
+
+    cam.render(world);
+
+}
+
 int main() {
-    switch (5){
+    switch (7){
         case 1: bouncing_spheres(); break;
         case 2: checkered_spheres(); break;
         case 3: earth(); break;
         case 4: perlin_spheres(); break;
         case 5: quads(); break;
+        case 6: simple_light(); break;
+        case 7: cornell_box(); break;
     }
     
     

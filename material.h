@@ -9,6 +9,11 @@ class material {
         // 虛擬解構子 確保衍生類別釋放記憶體時能正確被呼叫
         virtual ~material() = default;
 
+        // 預設發光顏色為黑色 color(0,0,0)
+        virtual color emitted(double u, double v, const point3& p) const {
+            return color(0,0,0);
+        }
+
         // 純虛擬 / 虛擬函式 定義材質的散射行為
         virtual bool scatter(
             const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered
@@ -105,6 +110,30 @@ class dielectric : public material {
     private:
         // 保存該材質的物理折射率數值
         double refraction_index;
+};
+
+// 發光材質類別
+class diffuse_light : public material {
+    public:
+        // 一般紋理(如帶圖案的燈箱)
+        diffuse_light(shared_ptr<texture> tex) : tex(tex) {}
+
+        // 直接傳入單一顏色(如白光 紅光)
+        diffuse_light(const color& emit) : tex(make_shared<solid_color>(emit)) {}
+
+        // 不散射射線(發光體不反射其他光線)
+        bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered)
+        const override {
+            return false;
+        }
+
+        // 射線擊中此材質時 回傳其發射顏色
+        color emitted(double u, double v, const point3& p) const override {
+            return tex->value(u, v, p);
+        }
+
+    private:
+        shared_ptr<texture> tex;
 };
 
 #endif
