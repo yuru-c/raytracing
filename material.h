@@ -136,4 +136,22 @@ class diffuse_light : public material {
         shared_ptr<texture> tex;
 };
 
+// 各向同性材質類別(煙霧微粒散射)
+class isotropic : public material {
+    public:
+        isotropic(const color& albedo) : tex(make_shared<solid_color>(albedo)) {}
+        isotropic(shared_ptr<texture> tex) : tex(tex) {}
+
+        bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered)
+        const override {
+            // 光線撞擊煙粒子後 往3D球面上隨機任一方向發散
+            scattered = ray(rec.p, random_unit_vector(), r_in.time());
+            attenuation = tex->value(rec.u, rec.v, rec.p);
+            return true;
+        }
+    
+    private:
+        shared_ptr<texture> tex;
+};
+
 #endif
