@@ -26,6 +26,7 @@ public:
     double defocus_angle = 0; // 模擬光圈大小:射線穿過每個像素的隨機發散錐角(角度制 0代表不開景深)
     double focus_dist = 10; // 模擬對焦平面距離:從相機中心到完美對焦平面的絕對距離
 
+    // 修改render 引入雙重迴圈對每個子像素格子進行採樣
     void render(const hittable& world) {
         initialize();
 
@@ -38,9 +39,13 @@ public:
             for (int i = 0; i < image_width; i++) {
                 // 收集並疊加多條隨機光線的顏色
                 color pixel_color(0, 0, 0);
-                for (int sample = 0; sample < samples_per_pixel; sample++) {
-                    ray r = get_ray(i, j);
+                // 不隨機抽spp次數 改依據網格橫向 縱向均勻採購
+                for (int s_j = 0; s_j < sqrt_spp;s_j++) {
+                    for (int s_i = 0; s_i < sqrt_spp; s_i++) {
+                        // 傳入當前子格子的索引 s_i, s_j
+                    ray r = get_ray(i, j, s_i, s_j);
                     pixel_color += ray_color(r, max_depth, world);
+                    }
                 }
                 // 將加總的顏色乘以縮放因子 (除以 samples_per_pixel) 再寫入
                 write_color(outFile, pixel_samples_scale * pixel_color); 
@@ -53,6 +58,9 @@ public:
 private:
     int    image_height;   // 影像像素高度
     double pixel_samples_scale;  // 色彩縮放因子 (1.0 / samples_per_pixel)
+    // 用於分層採樣的網格參數
+    int sqrt_spp; // 採樣樹的平方根(spp=64 則sqrt_spp=8)
+    double recip_sqrt_spp; // 1/sqrt_spp 用於計算子格子大小
     point3 center;         // 相機中心點
     point3 pixel00_loc;    // (0,0) 像素的中心座標
     vec3   pixel_delta_u;  // 往右一個像素的偏移量
@@ -69,8 +77,12 @@ private:
         image_height = int(image_width / aspect_ratio);
         image_height = (image_height < 1) ? 1 : image_height;
 
+        // 計算分層網格尺寸
+        sqrt_spp = int(std::sqrt(samples_per_pixel));
+
         // 計算乘數因子
-        pixel_samples_scale = 1.0 / samples_per_pixel;
+        pixel_samples_scale = 1.0 / (sqrt_spp * sqrt_spp); // 確保縮放因子使用的是完美的平方數spp
+        recip_sqrt_spp = 1.0 / sqrt_spp;
 
         // 相機中心為使用者指定的lookfrom座標點
         center = lookfrom;
@@ -115,9 +127,9 @@ private:
     }
 
     // 建立一條射向像素 (i,j) 周邊隨機採樣點的光線
-    ray get_ray(int i, int j) const {
+    ray get_ray(int i, int j, int s_i, int s_j) const {
         // 1.在當前像素 (i,j) 內部進行二維反鋸齒微幅隨機偏移
-        auto offset = sample_square();
+        auto offset = sample_square_stratified(s_i, s_j);
         auto pixel_sample = pixel00_loc + ((i + offset.x()) * pixel_delta_u) + ((j + offset.y()) * pixel_delta_v);
 
         // 2.如果 defocus_angle 設為0 代表不開景深 起點直接是相機中心center
@@ -176,6 +188,15 @@ private:
         // vec3 unit_direction = unit_vector(r.direction());
         // auto a = 0.5 * (unit_direction.y() + 1.0);
         // return (1.0 - a) * color(1.0, 1.0, 1.0) + a * color(0.5, 0.7, 1.0);
+
+        // 計算子格子內部的抖動(jittered)座標
+        vec3 sample_square_stratified(int s_i, int s_j) const {
+            // 將idealized單元向素[-.5,-.5]到[+.5,+.5]切隔成網格
+            // 在指定的格子(s_i,s_j)內部再加上一個random_double()的隨機抖動
+            auto px = ((s_i + random_double()) * recip_sqrt_spp) - 0.5;
+            auto py = ((s_j + random_double()) * recip_sqrt_spp) -0.5;
+            return vec3(px, py, 0);
+        }
     
 };
 
