@@ -20,6 +20,11 @@ class material {
         ) const {
             return false;
         }
+
+        // 預設傳回0 代表該材質無散射PDF 例如發光體或特化鏡面
+        virtual double scattering_pdf(const ray& r_in, const hit_record& rec, const ray& scattered) const {
+            return 0;
+        }
 };
 
 // 繼承材質基底類別 漫反射材質
@@ -33,7 +38,8 @@ class lambertian : public material {
         // 覆寫(override)散射行為
         bool scatter(const ray& r_in, const hit_record& rec, color& attenuation, ray& scattered)
         const override {
-            auto scatter_direction = rec.normal + random_unit_vector();
+            // 在半球面上進行均勻隨機採樣(非餘弦加權)
+            auto scatter_direction = random_on_hemisphere(rec.normal);
             // 防彈安全鎖 捕捉退化的散射方向
             if (scatter_direction.near_zero())
                 scatter_direction = rec.normal; // 如歸零 就強制讓他等於法向量
@@ -43,6 +49,15 @@ class lambertian : public material {
             // 材質的紋理中 根據撞擊點的(u,v,p)採樣出顏色衰減值值
             attenuation = tex->value(rec.u, rec.v, rec.p); // 衰減率直接等於材質本身的顏色(反照率)
             return true;
+        }
+
+        // 實作朗伯漫反射的散射PDF:cos(theta)/pi
+        double scattering_pdf(const ray& r_in, const hit_record& rec, const ray& scattered) const override {
+            // 使用點積求出散射方向與法向量夾角的餘弦值
+            // auto cos_theta = dot(rec.normal, unit_vector(scattered.direction()));
+            // 若餘弦值小於0(射入表面下)PDF為0 否則為cos_theta/pi
+            // return cos_theta < 0 ? 0 : cos_theta/pi;
+            return 1 / (2*pi);
         }
     private:
         shared_ptr<texture> tex; // 紋理指標

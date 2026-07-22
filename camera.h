@@ -178,9 +178,15 @@ private:
             // -> 如果材質不散射光線 則漫反射計算終止 直接回傳材質發光的光
             if (!rec.mat->scatter(r, rec, attenuation, scattered))
                 return color_from_emission;
+
+            // 計算材質本身的scattering_pdf
+            double scattering_pdf = rec.mat->scattering_pdf(r, rec, scattered);
+            // 當前實際用於採樣分母的pdf_value等於散射PDF
+            double pdf_value = scattering_pdf;
                 
             // 若材質會散射(一般漫反射或金屬) 自身發光與反射收集的光疊加
-            color color_from_scatter = attenuation * ray_color(scattered, depth-1, world);
+            // 蒙地卡羅核心估算式:(A*p_scatter*Color_in)/pdf_value
+            color color_from_scatter = (attenuation * scattering_pdf * ray_color(scattered, depth-1, world)) / pdf_value;
             return color_from_emission + color_from_scatter;
         }
     
